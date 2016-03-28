@@ -38,11 +38,20 @@ var render = function(parsed) {
 
 var syncScroll = function() {
     var textarea = $("#text");
+    var lineHeight = parseFloat(textarea.css('line-height'));
+    // NOTE this assumes we don't have wrapped lines,
+    // so we set white-space: nowrap on the textarea:
+    var lineNumber = Math.floor(textarea.scrollTop() / lineHeight) + 1;
     var preview = $("#preview iframe").contents().find('body');
-    var amount = textarea.scrollTop() / textarea.prop('scrollHeight');
-    preview.animate({
-        scrollTop: preview.height() * amount
-    }, 50);
+    var elt = preview.find("[data-sourcepos^='" + lineNumber + ":']").last();
+    if (elt.length > 0) {
+        if (elt.offset()) {
+            var curTop = preview.scrollTop();
+            preview.animate({
+                scrollTop: curTop + elt.offset().top - 100
+            }, 50);
+        }
+    }
 };
 
 var markSelection = function() {
