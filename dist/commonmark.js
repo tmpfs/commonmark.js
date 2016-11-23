@@ -1,4 +1,4 @@
-!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var o;"undefined"!=typeof window?o=window:"undefined"!=typeof global?o=global:"undefined"!=typeof self&&(o=self),o.commonmark=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.commonmark = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 "use strict";
 
 var Node = require('./node');
@@ -24,8 +24,8 @@ var reHtmlBlockOpen = [
    /^<[?]/,
    /^<![A-Z]/,
    /^<!\[CDATA\[/,
-   /^<[/]?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h1|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|meta|nav|noframes|ol|optgroup|option|p|param|section|source|title|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?:\s|[/]?[>]|$)/i,
-    new RegExp('^(?:' + OPENTAG + '|' + CLOSETAG + ')\s*$', 'i')
+   /^<[/]?(?:address|article|aside|base|basefont|blockquote|body|caption|center|col|colgroup|dd|details|dialog|dir|div|dl|dt|fieldset|figcaption|figure|footer|form|frame|frameset|h[123456]|head|header|hr|html|iframe|legend|li|link|main|menu|menuitem|meta|nav|noframes|ol|optgroup|option|p|param|section|source|title|summary|table|tbody|td|tfoot|th|thead|title|tr|track|ul)(?:\s|[/]?[>]|$)/i,
+    new RegExp('^(?:' + OPENTAG + '|' + CLOSETAG + ')\\s*$', 'i')
 ];
 
 var reHtmlBlockClose = [
@@ -37,7 +37,7 @@ var reHtmlBlockClose = [
    /\]\]>/
 ];
 
-var reThematicBreak = /^(?:(?:\* *){3,}|(?:_ *){3,}|(?:- *){3,}) *$/;
+var reThematicBreak = /^(?:(?:\*[ \t]*){3,}|(?:_[ \t]*){3,}|(?:-[ \t]*){3,})[ \t]*$/;
 
 var reMaybeSpecial = /^[#`~*+_=<>0-9-]/;
 
@@ -47,13 +47,13 @@ var reBulletListMarker = /^[*+-]/;
 
 var reOrderedListMarker = /^(\d{1,9})([.)])/;
 
-var reATXHeadingMarker = /^#{1,6}(?: +|$)/;
+var reATXHeadingMarker = /^#{1,6}(?:[ \t]+|$)/;
 
 var reCodeFence = /^`{3,}(?!.*`)|^~{3,}(?!.*~)/;
 
 var reClosingCodeFence = /^(?:`{3,}|~{3,})(?= *$)/;
 
-var reSetextHeadingLine = /^(?:=+|-+) *$/;
+var reSetextHeadingLine = /^(?:=+|-+)[ \t]*$/;
 
 var reLineEnding = /\r\n|\n|\r/;
 
@@ -95,30 +95,6 @@ var endsWithBlankLine = function(block) {
     return false;
 };
 
-// Break out of all containing lists, resetting the tip of the
-// document to the parent of the highest list, and finalizing
-// all the lists.  (This is used to implement the "two blank lines
-// break out of all lists" feature.)
-var breakOutOfLists = function(block) {
-    var b = block;
-    var last_list = null;
-    do {
-        if (b.type === 'list') {
-            last_list = b;
-        }
-        b = b._parent;
-    } while (b);
-
-    if (last_list) {
-        while (block !== last_list) {
-            this.finalize(block, this.lineNumber);
-            block = block._parent;
-        }
-        this.finalize(last_list, this.lineNumber);
-        this.tip = last_list._parent;
-    }
-};
-
 // Add a line to the block at the tip.  We assume the tip
 // can accept lines -- that check should be done before calling this.
 var addLine = function() {
@@ -149,7 +125,7 @@ var addChild = function(tag, offset) {
 
 // Parse a list marker and return data on the marker (type,
 // start, delimiter, bullet character, padding) or null.
-var parseListMarker = function(parser) {
+var parseListMarker = function(parser, container) {
     var rest = parser.currentLine.slice(parser.nextNonspace);
     var match;
     var nextc;
@@ -166,7 +142,9 @@ var parseListMarker = function(parser) {
         data.type = 'bullet';
         data.bulletChar = match[0][0];
 
-    } else if ((match = rest.match(reOrderedListMarker))) {
+    } else if ((match = rest.match(reOrderedListMarker)) &&
+                (container.type !== 'paragraph' ||
+                 match[1] === '1')) {
         data.type = 'ordered';
         data.start = parseInt(match[1]);
         data.delimiter = match[2];
@@ -176,6 +154,11 @@ var parseListMarker = function(parser) {
     // make sure we have spaces after
     nextc = peek(parser.currentLine, parser.nextNonspace + match[0].length);
     if (!(nextc === -1 || nextc === C_TAB || nextc === C_SPACE)) {
+        return null;
+    }
+
+    // if it interrupts paragraph, make sure first line isn't blank
+    if (container.type === 'paragraph' && !parser.currentLine.slice(parser.nextNonspace + match[0].length).match(reNonSpace)) {
         return null;
     }
 
@@ -540,7 +523,7 @@ var blockStarts = [
         var data;
 
         if ((!parser.indented || container.type === 'list')
-                && (data = parseListMarker(parser))) {
+                && (data = parseListMarker(parser, container))) {
             parser.closeUnmatchedBlocks();
 
             // add the list if needed
@@ -577,7 +560,6 @@ var blockStarts = [
 ];
 
 var advanceOffset = function(count, columns) {
-    var cols = 0;
     var currentLine = this.currentLine;
     var charsToTab, charsToAdvance;
     var c;
@@ -589,16 +571,15 @@ var advanceOffset = function(count, columns) {
                 charsToAdvance = charsToTab > count ? count : charsToTab;
                 this.column += charsToAdvance;
                 this.offset += this.partiallyConsumedTab ? 0 : 1;
-                count -= (columns ? charsToAdvance : 1);
+                count -= charsToAdvance;
             } else {
                 this.partiallyConsumedTab = false;
                 this.column += charsToTab;
                 this.offset += 1;
-                this.count -= 1;
+                count -= 1;
             }
         } else {
             this.partiallyConsumedTab = false;
-            cols += 1;
             this.offset += 1;
             this.column += 1; // assume ascii; block starts are ascii
             count -= 1;
@@ -687,12 +668,6 @@ var incorporateLine = function(ln) {
 
     this.allClosed = (container === this.oldtip);
     this.lastMatchedContainer = container;
-
-    // Check to see if we've hit 2nd blank line; if so break out of list:
-    if (this.blank && container._lastLineBlank) {
-        this.breakOutOfLists(container);
-        container = this.tip;
-    }
 
     var matchedLeaf = container.type !== 'paragraph' &&
             blocks[container.type].acceptsLines;
@@ -885,7 +860,6 @@ function Parser(options){
         findNextNonspace: findNextNonspace,
         advanceOffset: advanceOffset,
         advanceNextNonspace: advanceNextNonspace,
-        breakOutOfLists: breakOutOfLists,
         addLine: addLine,
         addChild: addChild,
         incorporateLine: incorporateLine,
@@ -1079,7 +1053,7 @@ if (String.fromCodePoint) {
 // var renderer = new commonmark.HtmlRenderer();
 // console.log(renderer.render(parser.parse('Hello *world*')));
 
-module.exports.version = '0.25.1';
+module.exports.version = '0.27.0';
 module.exports.Node = require('./node');
 module.exports.Parser = require('./blocks');
 // module.exports.HtmlRenderer = require('./html');
@@ -1127,7 +1101,7 @@ var IN_PARENS_NOSP = '\\((' + REG_CHAR + '|' + ESCAPED_CHAR + '|\\\\)*\\)';
 var ENTITY = common.ENTITY;
 var reHtmlTag = common.reHtmlTag;
 
-var rePunctuation = new RegExp(/^[\u2000-\u206F\u2E00-\u2E7F\\'!"#\$%&\(\)\*\+,\-\.\/:;<=>\?@\[\]\^_`\{\|\}~]/);
+var rePunctuation = new RegExp(/[!-#%-\*,-/:;\?@\[-\]_\{\}\xA1\xA7\xAB\xB6\xB7\xBB\xBF\u037E\u0387\u055A-\u055F\u0589\u058A\u05BE\u05C0\u05C3\u05C6\u05F3\u05F4\u0609\u060A\u060C\u060D\u061B\u061E\u061F\u066A-\u066D\u06D4\u0700-\u070D\u07F7-\u07F9\u0830-\u083E\u085E\u0964\u0965\u0970\u0AF0\u0DF4\u0E4F\u0E5A\u0E5B\u0F04-\u0F12\u0F14\u0F3A-\u0F3D\u0F85\u0FD0-\u0FD4\u0FD9\u0FDA\u104A-\u104F\u10FB\u1360-\u1368\u1400\u166D\u166E\u169B\u169C\u16EB-\u16ED\u1735\u1736\u17D4-\u17D6\u17D8-\u17DA\u1800-\u180A\u1944\u1945\u1A1E\u1A1F\u1AA0-\u1AA6\u1AA8-\u1AAD\u1B5A-\u1B60\u1BFC-\u1BFF\u1C3B-\u1C3F\u1C7E\u1C7F\u1CC0-\u1CC7\u1CD3\u2010-\u2027\u2030-\u2043\u2045-\u2051\u2053-\u205E\u207D\u207E\u208D\u208E\u2308-\u230B\u2329\u232A\u2768-\u2775\u27C5\u27C6\u27E6-\u27EF\u2983-\u2998\u29D8-\u29DB\u29FC\u29FD\u2CF9-\u2CFC\u2CFE\u2CFF\u2D70\u2E00-\u2E2E\u2E30-\u2E42\u3001-\u3003\u3008-\u3011\u3014-\u301F\u3030\u303D\u30A0\u30FB\uA4FE\uA4FF\uA60D-\uA60F\uA673\uA67E\uA6F2-\uA6F7\uA874-\uA877\uA8CE\uA8CF\uA8F8-\uA8FA\uA8FC\uA92E\uA92F\uA95F\uA9C1-\uA9CD\uA9DE\uA9DF\uAA5C-\uAA5F\uAADE\uAADF\uAAF0\uAAF1\uABEB\uFD3E\uFD3F\uFE10-\uFE19\uFE30-\uFE52\uFE54-\uFE61\uFE63\uFE68\uFE6A\uFE6B\uFF01-\uFF03\uFF05-\uFF0A\uFF0C-\uFF0F\uFF1A\uFF1B\uFF1F\uFF20\uFF3B-\uFF3D\uFF3F\uFF5B\uFF5D\uFF5F-\uFF65]|\uD800[\uDD00-\uDD02\uDF9F\uDFD0]|\uD801\uDD6F|\uD802[\uDC57\uDD1F\uDD3F\uDE50-\uDE58\uDE7F\uDEF0-\uDEF6\uDF39-\uDF3F\uDF99-\uDF9C]|\uD804[\uDC47-\uDC4D\uDCBB\uDCBC\uDCBE-\uDCC1\uDD40-\uDD43\uDD74\uDD75\uDDC5-\uDDC9\uDDCD\uDDDB\uDDDD-\uDDDF\uDE38-\uDE3D\uDEA9]|\uD805[\uDCC6\uDDC1-\uDDD7\uDE41-\uDE43\uDF3C-\uDF3E]|\uD809[\uDC70-\uDC74]|\uD81A[\uDE6E\uDE6F\uDEF5\uDF37-\uDF3B\uDF44]|\uD82F\uDC9F|\uD836[\uDE87-\uDE8B]/);
 
 var reLinkTitle = new RegExp(
     '^(?:"(' + ESCAPED_CHAR + '|[^"\\x00])*"' +
@@ -1160,9 +1134,13 @@ var reAutolink = /^<[A-Za-z][A-Za-z0-9.+-]{1,31}:[^<>\x00-\x20]*>/i;
 
 var reSpnl = /^ *(?:\n *)?/;
 
-var reWhitespaceChar = /^\s/;
+var reWhitespaceChar = /^[ \t\n\x0b\x0c\x0d]/;
 
-var reWhitespace = /\s+/g;
+var reWhitespace = /[ \t\n\x0b\x0c\x0d]+/g;
+
+var reUnicodeWhitespaceChar = /^\s/;
+
+var reUnicodeWhitespace = /\s+/g;
 
 var reFinalSpace = / *$/;
 
@@ -1340,9 +1318,9 @@ var scanDelims = function(cc) {
         char_after = fromCodePoint(cc_after);
     }
 
-    after_is_whitespace = reWhitespaceChar.test(char_after);
+    after_is_whitespace = reUnicodeWhitespaceChar.test(char_after);
     after_is_punctuation = rePunctuation.test(char_after);
-    before_is_whitespace = reWhitespaceChar.test(char_before);
+    before_is_whitespace = reUnicodeWhitespaceChar.test(char_before);
     before_is_punctuation = rePunctuation.test(char_before);
 
     left_flanking = !after_is_whitespace &&
@@ -1395,8 +1373,7 @@ var handleDelim = function(cc, block) {
                         previous: this.delimiters,
                         next: null,
                         can_open: res.can_open,
-                        can_close: res.can_close,
-                        active: true };
+                        can_close: res.can_close };
     if (this.delimiters.previous !== null) {
         this.delimiters.previous.next = this.delimiters;
     }
@@ -1432,6 +1409,7 @@ var processEmphasis = function(stack_bottom) {
     var tmp, next;
     var opener_found;
     var openers_bottom = [];
+    var odd_match = false;
 
     openers_bottom[C_UNDERSCORE] = stack_bottom;
     openers_bottom[C_ASTERISK] = stack_bottom;
@@ -1446,10 +1424,7 @@ var processEmphasis = function(stack_bottom) {
     // move forward, looking for closers, and handling each
     while (closer !== null) {
         var closercc = closer.cc;
-        if (!(closer.can_close && (closercc === C_UNDERSCORE ||
-                                   closercc === C_ASTERISK ||
-                                   closercc === C_SINGLEQUOTE ||
-                                   closercc === C_DOUBLEQUOTE))) {
+        if (!closer.can_close) {
             closer = closer.next;
         } else {
             // found emphasis closer. now look back for first matching opener:
@@ -1457,7 +1432,9 @@ var processEmphasis = function(stack_bottom) {
             opener_found = false;
             while (opener !== null && opener !== stack_bottom &&
                    opener !== openers_bottom[closercc]) {
-                if (opener.cc === closer.cc && opener.can_open) {
+                odd_match = (closer.can_open || opener.can_close) &&
+                    (opener.numdelims + closer.numdelims) % 3 === 0;
+                if (opener.cc === closer.cc && opener.can_open && !odd_match) {
                     opener_found = true;
                     break;
                 }
@@ -1536,8 +1513,12 @@ var processEmphasis = function(stack_bottom) {
                 closer = closer.next;
 
             }
-            if (!opener_found) {
+            if (!opener_found && !odd_match) {
                 // Set lower bound for future searches for openers:
+                // We don't do this with odd_match because a **
+                // that doesn't match an earlier * might turn into
+                // an opener, and the * might be matched by something
+                // else.
                 openers_bottom[closercc] = old_closer.previous;
                 if (!old_closer.can_open) {
                     // We can remove a closer that can't be an opener,
@@ -1602,21 +1583,8 @@ var parseOpenBracket = function(block) {
     block.appendChild(node);
 
     // Add entry to stack for this opener
-    this.delimiters = { cc: C_OPEN_BRACKET,
-                        numdelims: 1,
-                        node: node,
-                        previous: this.delimiters,
-                        next: null,
-                        can_open: true,
-                        can_close: false,
-                        index: startpos,
-                        active: true };
-    if (this.delimiters.previous !== null) {
-        this.delimiters.previous.next = this.delimiters;
-    }
-
+    this.addBracket(node, startpos, false);
     return true;
-
 };
 
 // IF next character is [, and ! delimiter to delimiter stack and
@@ -1631,18 +1599,7 @@ var parseBang = function(block) {
         block.appendChild(node);
 
         // Add entry to stack for this opener
-        this.delimiters = { cc: C_BANG,
-                            numdelims: 1,
-                            node: node,
-                            previous: this.delimiters,
-                            next: null,
-                            can_open: true,
-                            can_close: false,
-                            index: startpos + 1,
-                            active: true };
-        if (this.delimiters.previous !== null) {
-            this.delimiters.previous.next = this.delimiters;
-        }
+        this.addBracket(node, startpos + 1, true);
     } else {
         block.appendChild(text('!'));
     }
@@ -1665,15 +1622,8 @@ var parseCloseBracket = function(block) {
     this.pos += 1;
     startpos = this.pos;
 
-    // look through stack of delimiters for a [ or ![
-    opener = this.delimiters;
-
-    while (opener !== null) {
-        if (opener.cc === C_OPEN_BRACKET || opener.cc === C_BANG) {
-            break;
-        }
-        opener = opener.previous;
-    }
+    // get last [ or ![
+    opener = this.brackets;
 
     if (opener === null) {
         // no matched opener, just return a literal
@@ -1684,15 +1634,17 @@ var parseCloseBracket = function(block) {
     if (!opener.active) {
         // no matched opener, just return a literal
         block.appendChild(text(']'));
-        // take opener off emphasis stack
-        this.removeDelimiter(opener);
+        // take opener off brackets stack
+        this.removeBracket();
         return true;
     }
 
     // If we got here, open is a potential opener
-    is_image = opener.cc === C_BANG;
+    is_image = opener.image;
 
     // Check to see if we have a link/image
+
+    var savepos = this.pos;
 
     // Inline link?
     if (this.peek() === C_OPEN_PAREN) {
@@ -1707,30 +1659,36 @@ var parseCloseBracket = function(block) {
             this.peek() === C_CLOSE_PAREN) {
             this.pos += 1;
             matched = true;
+        } else {
+            this.pos = savepos;
         }
-    } else {
+    }
+
+    if (!matched) {
 
         // Next, see if there's a link label
-        var savepos = this.pos;
         var beforelabel = this.pos;
         var n = this.parseLinkLabel();
-        if (n === 0 || n === 2) {
-            // empty or missing second label
-            reflabel = this.subject.slice(opener.index, startpos);
-        } else {
+        if (n > 2) {
             reflabel = this.subject.slice(beforelabel, beforelabel + n);
+        } else if (!opener.bracketAfter) {
+            // Empty or missing second label means to use the first label as the reference.
+            // The reference must not contain a bracket. If we know there's a bracket, we don't even bother checking it.
+            reflabel = this.subject.slice(opener.index, startpos);
         }
         if (n === 0) {
             // If shortcut reference link, rewind before spaces we skipped.
             this.pos = savepos;
         }
 
-        // lookup rawlabel in refmap
-        var link = this.refmap[normalizeReference(reflabel)];
-        if (link) {
-            dest = link.destination;
-            title = link.title;
-            matched = true;
+        if (reflabel) {
+            // lookup rawlabel in refmap
+            var link = this.refmap[normalizeReference(reflabel)];
+            if (link) {
+                dest = link.destination;
+                title = link.title;
+                matched = true;
+            }
         }
     }
 
@@ -1748,17 +1706,17 @@ var parseCloseBracket = function(block) {
             tmp = next;
         }
         block.appendChild(node);
-        this.processEmphasis(opener.previous);
-
+        this.processEmphasis(opener.previousDelimiter);
+        this.removeBracket();
         opener.node.unlink();
 
-        // processEmphasis will remove this and later delimiters.
+        // We remove this bracket and processEmphasis will remove later delimiters.
         // Now, for a link, we also deactivate earlier link openers.
         // (no links in links)
         if (!is_image) {
-          opener = this.delimiters;
+          opener = this.brackets;
           while (opener !== null) {
-            if (opener.cc === C_OPEN_BRACKET) {
+            if (!opener.image) {
                 opener.active = false; // deactivate this opener
             }
             opener = opener.previous;
@@ -1769,12 +1727,28 @@ var parseCloseBracket = function(block) {
 
     } else { // no match
 
-        this.removeDelimiter(opener);  // remove this opener from stack
+        this.removeBracket();  // remove this opener from stack
         this.pos = startpos;
         block.appendChild(text(']'));
         return true;
     }
 
+};
+
+var addBracket = function(node, index, image) {
+    if (this.brackets !== null) {
+        this.brackets.bracketAfter = true;
+    }
+    this.brackets = { node: node,
+                      previous: this.brackets,
+                      previousDelimiter: this.delimiters,
+                      index: index,
+                      image: image,
+                      active: true };
+};
+
+var removeBracket = function() {
+    this.brackets = this.brackets.previous;
 };
 
 // Attempt to parse an entity.
@@ -1977,6 +1951,7 @@ var parseInlines = function(block) {
     this.subject = block._string_content.trim();
     this.pos = 0;
     this.delimiters = null;
+    this.brackets = null;
     while (this.parseInline(block)) {
     }
     block._string_content = null; // allow raw string to be garbage collected
@@ -1988,6 +1963,7 @@ function InlineParser(options){
     return {
         subject: '',
         delimiters: null,  // used by handleDelim method
+        brackets: null,
         pos: 0,
         refmap: {},
         match: match,
@@ -2003,8 +1979,10 @@ function InlineParser(options){
         parseLinkDestination: parseLinkDestination,
         parseLinkLabel: parseLinkLabel,
         parseOpenBracket: parseOpenBracket,
-        parseCloseBracket: parseCloseBracket,
         parseBang: parseBang,
+        parseCloseBracket: parseCloseBracket,
+        addBracket: addBracket,
+        removeBracket: removeBracket,
         parseEntity: parseEntity,
         parseString: parseString,
         parseNewline: parseNewline,
@@ -2343,7 +2321,6 @@ var Renderer = require('./renderer');
 
 var esc = require('../common').escapeXml;
 
-var reHtmlTag = /\<[^>]*\>/;
 var reUnsafeProtocol = /^javascript:|vbscript:|file:|data:/i;
 var reSafeDataProtocol = /^data:image\/(?:png|gif|jpeg|webp)/i;
 
@@ -2761,7 +2738,7 @@ var renderNodes = function(block) {
     if (options.time) { console.time("rendering"); }
 
     buffer += '<?xml version="1.0" encoding="UTF-8"?>\n';
-    buffer += '<!DOCTYPE CommonMark SYSTEM "CommonMark.dtd">\n';
+    buffer += '<!DOCTYPE document SYSTEM "CommonMark.dtd">\n';
 
     while ((event = walker.next())) {
         entering = event.entering;

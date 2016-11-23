@@ -12,4 +12,54 @@ bar</li>
 </ul>
 ````````````````````````````````
 
+Type 7 HTML block followed by whitespace (#98).
+
+```````````````````````````````` example
+<a>  
+x
+.
+<a>  
+x
+````````````````````````````````
+
+h2..h6 raw HTML blocks (jgm/CommonMark#430).
+
+```````````````````````````````` example
+<h1>lorem</h1>
+
+<h2>lorem</h2>
+
+<h3>lorem</h3>
+
+<h4>lorem</h4>
+
+<h5>lorem</h5>
+
+<h6>lorem</h6>
+.
+<h1>lorem</h1>
+<h2>lorem</h2>
+<h3>lorem</h3>
+<h4>lorem</h4>
+<h5>lorem</h5>
+<h6>lorem</h6>
+````````````````````````````````
+
+Issue #109 - tabs after setext header line
+
+
+```````````````````````````````` example
+hi
+--→
+.
+<h2>hi</h2>
+````````````````````````````````
+
+Issue #108 - Chinese punctuation not recognized
+
+```````````````````````````````` example
+**。**话
+.
+<p>**。**话</p>
+````````````````````````````````
 
